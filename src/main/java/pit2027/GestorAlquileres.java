@@ -1,6 +1,12 @@
 package pit2027;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class GestorAlquileres {
     
@@ -244,6 +250,138 @@ public class GestorAlquileres {
 
 
     /////////////////////////////////////////////////////////////////////////////////////
+    // GUARDAR Y CARGAR DATOS EN UN FICHERO DE TEXTO (FORMATO JSON)
+
+    /**
+     * Guarda en un fichero de texto los clientes, los vehículos y los alquileres.
+     * El fichero contiene un único objeto JSON con tres listas:
+     * {"clientes":[...], "vehiculos":[...], "alquileres":[...]}
+     * @param ruta ruta del fichero donde se guardan los datos
+     * @return true si se ha guardado bien, false si ha habido algún error
+     */
+    public boolean guardarDatos(String ruta) {
+        // Cada objeto se serializa con su toString() (que ya devuelve JSON)
+        JSONArray listaClientes = new JSONArray();
+        for (Cliente cliente : obtenerClientes()) {
+            listaClientes.put(new JSONObject(cliente.toString()));
+        }
+
+        JSONArray listaVehiculos = new JSONArray();
+        for (Vehiculo vehiculo : obtenerVehiculos()) {
+            listaVehiculos.put(new JSONObject(vehiculo.toString()));
+        }
+
+        JSONArray listaAlquileres = new JSONArray();
+        for (int i = 0; i < contadorAlquileres; i++) {
+            listaAlquileres.put(new JSONObject(alquileres[i].toString()));
+        }
+
+        JSONObject datos = new JSONObject();
+        datos.put("clientes", listaClientes);
+        datos.put("vehiculos", listaVehiculos);
+        datos.put("alquileres", listaAlquileres);
+
+        try {
+            // toString(2): JSON con sangría de 2 espacios para que se pueda leer
+            Files.writeString(Path.of(ruta), datos.toString(2));
+            return true;
+        } catch (IOException e) {
+            System.out.println("Error al guardar los datos: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Carga desde un fichero los datos guardados con guardarDatos y SUSTITUYE
+     * los clientes, vehículos y alquileres que hay ahora en el gestor.
+     * Si el fichero no existe o tiene un formato incorrecto no se cambia nada.
+     * @param ruta ruta del fichero a leer
+     * @return true si se ha cargado bien, false si ha habido algún error
+     */
+    public boolean cargarDatos(String ruta) {
+        try {
+            String texto = Files.readString(Path.of(ruta));
+            JSONObject datos = new JSONObject(texto);
+
+            // Primero se construye todo en variables locales. Solo si no falla nada
+            // se sustituyen los datos del gestor (así un fichero erróneo no los estropea).
+            JSONArray listaClientes = datos.getJSONArray("clientes");
+            JSONArray listaVehiculos = datos.getJSONArray("vehiculos");
+            JSONArray listaAlquileres = datos.getJSONArray("alquileres");
+
+            Cliente[] nuevosClientes = new Cliente[Math.max(clientes.length, listaClientes.length())];
+            for (int i = 0; i < listaClientes.length(); i++) {
+                // Las factorías deciden qué objeto crear a partir del JSON
+                nuevosClientes[i] = FactoriaClientes.getCliente(listaClientes.getJSONObject(i).toString());
+            }
+
+            Vehiculo[] nuevosVehiculos = new Vehiculo[Math.max(vehiculos.length, listaVehiculos.length())];
+            for (int i = 0; i < listaVehiculos.length(); i++) {
+                nuevosVehiculos[i] = FactoriaVehiculos.getVehiculo(listaVehiculos.getJSONObject(i).toString());
+            }
+
+            Alquiler[] nuevosAlquileres = new Alquiler[Math.max(alquileres.length, listaAlquileres.length())];
+            for (int i = 0; i < listaAlquileres.length(); i++) {
+                JSONObject json = listaAlquileres.getJSONObject(i);
+
+                // El alquiler guarda una copia del cliente y del vehículo. Para que el alquiler apunte a
+                // los MISMOS objetos que hay en las listas (y así cambiar la disponibilidad de un vehículo
+                // se vea en todos sitios) los buscamos por DNI y por matrícula.
+                String dni = json.getJSONObject("cliente").getString("dni");
+                String matricula = json.getJSONObject("vehiculo").getString("matricula");
+                Cliente cliente = buscarCliente(nuevosClientes, dni);
+                Vehiculo vehiculo = buscarVehiculo(nuevosVehiculos, matricula);
+                if (cliente == null || vehiculo == null) {
+                    throw new IllegalArgumentException("Un alquiler usa un cliente o un vehículo que no está en el fichero");
+                }
+
+                LocalDate inicio = LocalDate.parse(json.getString("fechaInicio"));
+                LocalDate fin = LocalDate.parse(json.getString("fechaFin"));
+                PoliticasDePrecios politica = PoliticasDePrecios.Normal;
+                if (json.has("politica")) {
+                    politica = PoliticasDePrecios.valueOf(json.getString("politica"));
+                }
+                nuevosAlquileres[i] = new Alquiler(vehiculo, cliente, inicio, fin, politica);
+            }
+
+            // Todo ha ido bien: sustituimos los datos del gestor
+            clientes = nuevosClientes;
+            vehiculos = nuevosVehiculos;
+            alquileres = nuevosAlquileres;
+            contadorAlquileres = listaAlquileres.length();
+            return true;
+
+        } catch (IOException e) {
+            System.out.println("Error al leer el fichero: " + e.getMessage());
+            return false;
+        } catch (RuntimeException e) {
+            // JSONException, DateTimeParseException, IllegalArgumentException...: el contenido no es válido
+            System.out.println("El fichero no tiene un formato válido: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Busca un cliente por DNI en un array (puede tener huecos null). Devuelve null si no está. */
+    private static Cliente buscarCliente(Cliente[] lista, String dni) {
+        for (Cliente cliente : lista) {
+            if (cliente != null && cliente.getDni().equals(dni)) {
+                return cliente;
+            }
+        }
+        return null;
+    }
+
+    /** Busca un vehículo por matrícula en un array (puede tener huecos null). Devuelve null si no está. */
+    private static Vehiculo buscarVehiculo(Vehiculo[] lista, String matricula) {
+        for (Vehiculo vehiculo : lista) {
+            if (vehiculo != null && vehiculo.getMatricula().equals(matricula)) {
+                return vehiculo;
+            }
+        }
+        return null;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
     // INTERFAZ DE USUARIO (CONSOLA) Y LÓGICA DE NEGOCIO
 
     // La interfaz de usuario y la lógica de negocio suelen implementarse por separado.
@@ -256,14 +394,39 @@ public class GestorAlquileres {
         
         while(!salir){
 
-            // Se da oportunidad de salir inmediatamente de la app.
-            System.out.println("Gestíon de Alquileres");
-            System.out.println("¿Desea salir de la app (S/N)?");
+            // Menú inicial: además de entrar como cliente o salir de la app,
+            // se pueden guardar y cargar los datos en un fichero de texto.
+            System.out.println("Gestión de Alquileres");
+            System.out.println("(1) Acceder como cliente");
+            System.out.println("(2) Guardar los datos en un fichero");
+            System.out.println("(3) Cargar los datos desde un fichero");
+            System.out.println("(4) Salir de la app");
 
-            char s = KeyBoard.readChar();
-            if (s == 's' || s == 'S'){
+            int accion = KeyBoard.readInt();
+
+            if (accion == 4) {
                 System.out.println("Bye ...");
                 return;
+            }
+            else if (accion == 2) {
+                System.out.println("Nombre del fichero donde guardar los datos (por ejemplo datos.json):");
+                String ruta = KeyBoard.readString();
+                if (guardarDatos(ruta)) {
+                    System.out.println("Datos guardados en " + ruta);
+                }
+                continue; // Volver al menú inicial
+            }
+            else if (accion == 3) {
+                System.out.println("Nombre del fichero desde el que cargar los datos:");
+                String ruta = KeyBoard.readString();
+                if (cargarDatos(ruta)) {
+                    System.out.println("Datos cargados desde " + ruta);
+                }
+                continue; // Volver al menú inicial
+            }
+            else if (accion != 1) {
+                System.out.println("Opción inválida");
+                continue; // Volver al menú inicial
             }
 
             // Primero se identifica al cliente:
