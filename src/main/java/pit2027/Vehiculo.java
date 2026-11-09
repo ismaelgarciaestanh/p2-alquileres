@@ -18,6 +18,8 @@ public abstract class Vehiculo {
         this.matricula = matricula;
         this.categoria = categoria;
         this.annio = annio;
+        // Un vehículo recién creado está libre para alquilar
+        this.disponible = true;
     }
 
     public String getMatricula() {
