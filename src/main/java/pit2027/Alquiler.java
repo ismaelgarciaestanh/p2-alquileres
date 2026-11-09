@@ -48,6 +48,26 @@ public class Alquiler {
     }
 
     /**
+     * Constructor para DESERIALIZAR: crea un alquiler a partir de su JSON.
+     * El cliente y el vehículo se reconstruyen con sus factorías.
+     * Si el JSON no trae política se usa la Normal.
+     * @param jsonString texto JSON del alquiler
+     */
+    public Alquiler(String jsonString) {
+        JSONObject json = new JSONObject(jsonString);
+        this.cliente = FactoriaClientes.getCliente(json.getJSONObject("cliente").toString());
+        this.vehiculo = FactoriaVehiculos.getVehiculo(json.getJSONObject("vehiculo").toString());
+        this.fechaInicio = LocalDate.parse(json.getString("fechaInicio"));
+        this.fechaFin = LocalDate.parse(json.getString("fechaFin"));
+        if (json.has("politica")) {
+            this.politica = PoliticasDePrecios.valueOf(json.getString("politica"));
+        } else {
+            this.politica = PoliticasDePrecios.Normal;
+        }
+        this.calculador = crearCalculador(this.politica);
+    }
+
+    /**
      * Elige la estrategia (calculador de precio) que corresponde a una política.
      * Es privado: solo lo usa el propio Alquiler.
      */

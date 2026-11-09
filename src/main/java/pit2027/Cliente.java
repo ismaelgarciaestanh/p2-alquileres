@@ -16,6 +16,16 @@ public class Cliente {
         this.dni = dni;
     }
 
+    /**
+     * Constructor para DESERIALIZAR: crea un cliente a partir de su JSON.
+     * @param jsonString texto JSON, por ejemplo {"nombre":"Juan","dni":"1234"}
+     */
+    public Cliente(String jsonString) {
+        JSONObject json = new JSONObject(jsonString);
+        this.nombre = json.getString("nombre");
+        this.dni = json.getString("dni");
+    }
+
     public String getNombre() {
         return nombre;
     }
