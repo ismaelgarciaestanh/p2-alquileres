@@ -83,4 +83,44 @@ public class AlquilerTest {
         }
         assertTrue(encontrado);
     }
+
+    // ---------- Patrón Estrategia en Alquiler ----------
+
+    @Test
+    @DisplayName("Por defecto el alquiler usa la política Normal")
+    void politicaPorDefecto() {
+        Alquiler alquiler = new Alquiler(vehiculo, cliente, inicio, inicio.plusDays(3));
+
+        assertEquals(PoliticasDePrecios.Normal, alquiler.getPolitica());
+        // 4 días x 50 euros (turismo NORMAL)
+        assertEquals(200, alquiler.calcularPrecio());
+    }
+
+    @Test
+    @DisplayName("calcularPrecio usa la política con la que se creó el alquiler")
+    void calcularPrecioSegunPolitica() {
+        LocalDate fin = inicio.plusDays(3); // 4 días
+
+        assertEquals(200, new Alquiler(vehiculo, cliente, inicio, fin, PoliticasDePrecios.Normal).calcularPrecio());
+        assertEquals(400, new Alquiler(vehiculo, cliente, inicio, fin, PoliticasDePrecios.TemporadaAlta).calcularPrecio());
+        assertEquals(140, new Alquiler(vehiculo, cliente, inicio, fin, PoliticasDePrecios.Oferton).calcularPrecio());
+        assertEquals(150, new Alquiler(vehiculo, cliente, inicio, fin, PoliticasDePrecios.ClienteFrecuente).calcularPrecio());
+    }
+
+    @Test
+    @DisplayName("calcularPrecioAlquiler con política elige la estrategia indicada")
+    void calcularPrecioAlquilerConPolitica() {
+        Alquiler alquiler = new Alquiler(vehiculo, cliente, inicio, inicio.plusDays(3));
+
+        assertEquals(400, alquiler.calcularPrecioAlquiler(inicio, inicio.plusDays(3),
+                PoliticasDePrecios.TemporadaAlta, vehiculo));
+    }
+
+    @Test
+    @DisplayName("La política aparece en el JSON del alquiler")
+    void politicaEnJson() {
+        Alquiler alquiler = new Alquiler(vehiculo, cliente, inicio, inicio.plusDays(3), PoliticasDePrecios.Oferton);
+
+        assertEquals("Oferton", new JSONObject(alquiler.toString()).getString("politica"));
+    }
 }
