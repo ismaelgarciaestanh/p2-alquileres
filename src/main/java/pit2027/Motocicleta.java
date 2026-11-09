@@ -1,0 +1,18 @@
+package pit2027;
+
+public class Motocicleta extends Vehiculo {
+
+    int cilindrada;
+
+    public Motocicleta(String matricula, Categoria categoria, int annio,
+        int cilindrada
+    ) {
+        super(matricula, categoria, annio);
+        this.cilindrada = cilindrada;
+    }
+
+    public int getCilindrada() {
+        return cilindrada;
+    }
+
+}
