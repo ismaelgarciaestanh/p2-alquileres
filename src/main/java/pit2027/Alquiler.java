@@ -44,7 +44,7 @@ public class Alquiler {
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
         this.politica = politica;
-        this.calculador = crearCalculador(politica);
+        this.calculador = FactoriaCalculadoresPrecio.getCalculador(politica);
     }
 
     /**
@@ -64,25 +64,7 @@ public class Alquiler {
         } else {
             this.politica = PoliticasDePrecios.Normal;
         }
-        this.calculador = crearCalculador(this.politica);
-    }
-
-    /**
-     * Elige la estrategia (calculador de precio) que corresponde a una política.
-     * Es privado: solo lo usa el propio Alquiler.
-     */
-    private ICalculadorPrecio crearCalculador(PoliticasDePrecios politica) {
-        switch (politica) {
-            case TemporadaAlta:
-                return new CalculadorPrecioTemporadaAlta();
-            case Oferton:
-                return new CalculadorPrecioOferton();
-            case ClienteFrecuente:
-                return new CalculadorPrecioClienteFrecuente();
-            case Normal:
-            default:
-                return new CalculadorPrecioNormal();
-        }
+        this.calculador = FactoriaCalculadoresPrecio.getCalculador(this.politica);
     }
 
     public static Alquiler[] obtenerAlquileres() {
@@ -139,7 +121,7 @@ public class Alquiler {
      */
     public int calcularPrecioAlquiler(LocalDate fechaInicio, LocalDate fechaFin,
             PoliticasDePrecios politica, Vehiculo vehiculo) {
-        ICalculadorPrecio estrategia = crearCalculador(politica);
+        ICalculadorPrecio estrategia = FactoriaCalculadoresPrecio.getCalculador(politica);
         return estrategia.calcularPrecioAlquiler(fechaInicio, fechaFin, vehiculo);
     }
 
