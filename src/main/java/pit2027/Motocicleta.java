@@ -1,5 +1,7 @@
 package pit2027;
 
+import org.json.JSONObject;
+
 public class Motocicleta extends Vehiculo {
 
     int cilindrada;
@@ -9,6 +11,16 @@ public class Motocicleta extends Vehiculo {
     ) {
         super(matricula, categoria, annio);
         this.cilindrada = cilindrada;
+    }
+
+    /**
+     * Constructor para DESERIALIZAR: crea el objeto a partir de su JSON.
+     * @param jsonString texto JSON del vehículo
+     */
+    public Motocicleta(String jsonString) {
+        super(jsonString);
+        JSONObject json = new JSONObject(jsonString);
+        this.cilindrada = json.getInt("cilindrada");
     }
 
     public int getCilindrada() {

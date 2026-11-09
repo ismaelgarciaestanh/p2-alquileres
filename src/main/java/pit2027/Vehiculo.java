@@ -22,6 +22,19 @@ public abstract class Vehiculo {
         this.disponible = true;
     }
 
+    /**
+     * Constructor para DESERIALIZAR: lee de un JSON los atributos comunes a todos los vehículos.
+     * Las subclases lo llaman con super(jsonString) y después leen sus atributos propios.
+     * @param jsonString texto JSON del vehículo
+     */
+    public Vehiculo(String jsonString) {
+        JSONObject json = new JSONObject(jsonString);
+        this.matricula = json.getString("matricula");
+        this.categoria = Categoria.valueOf(json.getString("categoria"));
+        this.annio = json.getInt("annio");
+        this.disponible = json.getBoolean("disponible");
+    }
+
     public String getMatricula() {
         return matricula;
     }
